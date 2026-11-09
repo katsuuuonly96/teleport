@@ -1,0 +1,196 @@
+
+--// ANIME DICE AUTUMN EVENT
+--// APPLE DROP TELEPORTER
+--// DELTA EXECUTOR
+
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+
+local Player = Players.LocalPlayer
+
+-- SETTINGS
+local SEARCH_RADIUS = 1000
+local SCAN_DELAY = 0.5
+local TELEPORT_HEIGHT = 3
+
+local Running = false
+local CurrentTarget = nil
+
+-- GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AppleTeleporter"
+ScreenGui.ResetOnSpawn = false
+
+pcall(function()
+    ScreenGui.Parent = game:GetService("CoreGui")
+end)
+
+if not ScreenGui.Parent then
+    ScreenGui.Parent = Player:WaitForChild("PlayerGui")
+end
+
+local Main = Instance.new("Frame")
+Main.Size = UDim2.new(0, 230, 0, 170)
+Main.Position = UDim2.new(0.5, -115, 0.5, -85)
+Main.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.Draggable = true
+Main.Parent = ScreenGui
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 10)
+Corner.Parent = Main
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.BackgroundColor3 = Color3.fromRGB(150, 65, 30)
+Title.Text = "🍎 APPLE TELEPORTER"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.TextSize = 16
+Title.Font = Enum.Font.GothamBold
+Title.Parent = Main
+
+local function CreateButton(name, color, position)
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.new(0, 190, 0, 32)
+    Button.Position = UDim2.new(0, 20, 0, position)
+    Button.BackgroundColor3 = color
+    Button.Text = name
+    Button.TextColor3 = Color3.new(1, 1, 1)
+    Button.TextSize = 14
+    Button.Font = Enum.Font.GothamBold
+    Button.Parent = Main
+
+    local ButtonCorner = Instance.new("UICorner")
+    ButtonCorner.CornerRadius = UDim.new(0, 7)
+    ButtonCorner.Parent = Button
+
+    return Button
+end
+
+local StartButton = CreateButton("START", Color3.fromRGB(35, 160, 75), 45)
+local StopButton = CreateButton("STOP", Color3.fromRGB(190, 55, 55), 85)
+local CloseButton = CreateButton("CLOSE", Color3.fromRGB(75, 75, 90), 125)
+
+local Status = Instance.new("TextLabel")
+Status.Size = UDim2.new(1, 0, 0, 20)
+Status.Position = UDim2.new(0, 0, 1, 0)
+Status.BackgroundTransparency = 1
+Status.Text = "Status: Idle"
+Status.TextColor3 = Color3.new(1, 1, 1)
+Status.TextSize = 12
+Status.Font = Enum.Font.Gotham
+Status.Parent = Main
+
+-- CHARACTER
+local function GetCharacter()
+    local Character = Player.Character
+    if not Character then return nil end
+
+    local Humanoid = Character:FindFirstChildOfClass("Humanoid")
+    local Root = Character:FindFirstChild("HumanoidRootPart")
+
+    if not Humanoid or not Root then return nil end
+
+    return Character, Humanoid, Root
+end
+
+-- FIND APPLES
+local function IsApple(Object)
+    local Name = Object.Name:lower()
+
+    return Name:find("apple") ~= nil
+        and (Object:IsA("BasePart") or Object:IsA("Model"))
+end
+
+local function GetPosition(Object)
+    if Object:IsA("BasePart") then
+        return Object.Position
+    elseif Object:IsA("Model") then
+        return Object:GetPivot().Position
+    end
+
+    return nil
+end
+
+local function FindNearestApple()
+    local Character, Humanoid, Root = GetCharacter()
+    if not Root then return nil end
+
+    local Nearest = nil
+    local ShortestDistance = SEARCH_RADIUS
+
+    for _, Object in ipairs(Workspace:GetDescendants()) do
+        if IsApple(Object) then
+            local Position = GetPosition(Object)
+
+            if Position then
+                local Distance = (Root.Position - Position).Magnitude
+
+                if Distance < ShortestDistance then
+                    ShortestDistance = Distance
+                    Nearest = Object
+                end
+            end
+        end
+    end
+
+    return Nearest
+end
+
+-- TELEPORT LOOP
+local function StartFarm()
+    if Running then return end
+
+    Running = true
+    Status.Text = "Status: Searching apples..."
+
+    task.spawn(function()
+        while Running do
+            local Character, Humanoid, Root = GetCharacter()
+
+            if Character and Root then
+                local Apple = FindNearestApple()
+
+                if Apple and Apple.Parent then
+                    local Position = GetPosition(Apple)
+
+                    if Position then
+                        CurrentTarget = Apple
+
+                        -- Teleport near the apple
+                        Root.CFrame = CFrame.new(
+                            Position + Vector3.new(0, TELEPORT_HEIGHT, 0)
+                        )
+
+                        Status.Text = "Status: Apple found!"
+                    end
+                else
+                    Status.Text = "Status: No apples found"
+                end
+            else
+                Status.Text = "Status: Waiting for character"
+            end
+
+            task.wait(SCAN_DELAY)
+        end
+    end)
+end
+
+-- BUTTONS
+StartButton.MouseButton1Click:Connect(function()
+    StartFarm()
+end)
+
+StopButton.MouseButton1Click:Connect(function()
+    Running = false
+    Status.Text = "Status: Stopped"
+end)
+
+CloseButton.MouseButton1Click:Connect(function()
+    Running = false
+    ScreenGui:Destroy()
+end)
+
+print("Apple Teleporter loaded!")
