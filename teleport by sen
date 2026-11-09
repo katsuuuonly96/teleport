@@ -1,0 +1,38 @@
+
+-- FIND APPLE POSITION
+local function GetApplePosition(apple)
+    if not apple or not apple.Parent then
+        return nil
+    end
+
+    if apple:IsA("BasePart") then
+        return apple.Position
+    end
+
+    if apple:IsA("Model") then
+        local part = apple.PrimaryPart
+            or apple:FindFirstChildWhichIsA("BasePart", true)
+
+        if part then
+            return part.Position
+        end
+    end
+
+    return nil
+end
+
+-- TELEPORT DIRECTLY TO APPLE
+local function TeleportToApple(apple)
+    local character = game.Players.LocalPlayer.Character
+    if not character then return end
+
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    local applePosition = GetApplePosition(apple)
+    if not applePosition then return end
+
+    root.CFrame = CFrame.new(
+        applePosition + Vector3.new(0, 2, 0)
+    )
+end
